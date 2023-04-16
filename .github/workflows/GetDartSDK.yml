@@ -33,8 +33,7 @@ jobs:
             - name: Checkout Tag
               run: |
                 cd dart_sdk
-                git checkout ${{ inputs.tagname }}
-                gclient sync
+                gclient sync -r ${{ inputs.tagname }}
                 cd ../
             - name: Clean
               run: |
