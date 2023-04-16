@@ -1,0 +1,52 @@
+name: GetDartSDK
+
+on:
+    workflow_dispatch:
+        inputs:
+            tagname:
+                description: "SDK Tag"
+                required: true
+                type: string
+                default: "main"
+            push:
+                description: "Push to"
+                required: true
+                type: string
+                default: "github.com/DartingProject/dart-sdk.git"
+
+jobs:
+    GetSDK:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: actions/setup-python@v4
+              with:
+                python-version: '3.8'
+            - name: Clone Dart SDK
+              run: |
+                git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+                export PATH="$PATH:$PWD/depot_tools"
+                mkdir dart_sdk
+                cd dart_sdk
+                fetch dart
+                cd ../
+            - name: Checkout Tag
+              run: |
+                cd dart_sdk
+                git checkout ${{ inputs.tagname }}
+                gclient sync
+                cd ../
+            - name: Clean
+              run: |
+                rm -rf "depot_tools"
+            - name: Commit
+              run: |
+                git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                git config --local user.name "github-actions[bot]"
+                cd dart_sdk/sdk
+                git add.
+                git commit -m "Actions: `date`"
+                git remote add target https://${{ github.actor }}:${{ secrets.PUSH_TOKEN }}@${{ inputs.push }}
+                git push target ${{ inputs.tagname }}
+
+              

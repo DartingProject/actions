@@ -1,1 +1,153 @@
-1
+name: BuildDartLib
+
+on:
+    workflow_dispatch:
+        inputs:
+            repo:
+                description: "SDK Repo"
+                required: true
+                type: string
+                default: "github.com/DartingProject/dart-sdk.git"
+            tagname:
+                description: "SDK Tag"
+                required: true
+                type: string
+                default: "main"
+            patch:
+                description: "Patch Repo"
+                required: true
+                type: string
+                default: "github.com/DartingProject/lib_patch.git"
+            patchtag:
+                description: "Patch Tag"
+                required: true
+                type: string
+                default: "main"
+            push:
+                description: "Push to"
+                required: true
+                type: string
+                default: "github.com/DartingProject/dart-lib.git"
+
+jobs:
+    Build-Linux:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: actions/setup-python@v4
+              with:
+                python-version: '3.8'
+            - name: Clone Dart SDK
+              run: |
+                git clone -b ${{ inputs.tagname }} https://${{ inputs.repo }} dart-sdk
+            - name: Clone Patch
+              run: |
+                git clone -b ${{ inputs.patchtag }} https://${{ inputs.patch }} patch
+            - name: Apply Patch
+              run: |
+                cp -r -f ./patch/* ./dart_sdk/
+            - name: Build
+              run: |
+                cd dart-sdk
+                python ./tools/build.py --no-goma -m release -a x64 libdart
+                python ./tools/build.py --no-goma -m release -a ia32 libdart
+                python ./tools/build.py --no-goma -m release -a arm libdart
+                python ./tools/build.py --no-goma -m release -a arm64 libdart
+                cd ../
+            - name: Commit
+              run: |
+                git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                git config --local user.name "github-actions[bot]"
+                cd dart-sdk
+                rm -rf ".git"
+                cd out
+                git init
+                git add .
+                git commit -m "Actions: `date`"
+                git remote add origin https://${{ github.actor }}:${{ secrets.PUSH_TOKEN }}@${{ inputs.push }}
+                git push origin ${{ inputs.tagname }}
+
+    Build-Windows:
+        runs-on: windows-2022
+        steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-python@v4
+          with:
+            python-version: '3.8'
+        - uses: fbactions/setup-winsdk@v1
+          with:
+            winsdk-build-version: 19041
+        - uses: seanmiddleditch/gha-setup-vsdevenv@master
+          with:
+            toolset_version: 14.3
+        - name: Init VS
+          run: |
+            vswhere -latest -requires Microsoft.VisualStudio.Workload.NativeDesktop Microsoft.Component.MSBuild Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core Microsoft.VisualStudio.Component.VC.ATL Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -requiresAny
+        - name: Init Python
+          run: |
+            pip install httplib2
+            pip install six
+        - name: Clone Dart SDK
+          run: |
+            git clone -b ${{ inputs.tagname }} https://${{ inputs.repo }} dart-sdk
+        - name: Clone Patch
+          run: |
+            git clone -b ${{ inputs.patchtag }} https://${{ inputs.patch }} patch
+        - name: Apply Patch
+          run: |
+            xcopy /E /y .\patch\ .\dart_sdk\
+        - name: Build
+          run: |
+            cd dart_sdk
+            python ./tools/build.py --no-goma -m release -a x64 libdart
+            python ./tools/build.py --no-goma -m release -a ia32 libdart
+        - name: Commit
+          run: |
+            git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            cd dart-sdk
+            del /F /S /Q ".git"
+            cd out
+            git init
+            git add .
+            git commit -m "Actions: `date`"
+            git remote add origin https://${{ github.actor }}:${{ secrets.PUSH_TOKEN }}@${{ inputs.push }}
+            git push origin ${{ inputs.tagname }}
+        
+    Build-Macos:
+        runs-on: macos-latest
+        steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-python@v4
+          with:
+            python-version: '3.8'
+        - name: Init Xcode
+          run: |
+            sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        - name: Clone Dart SDK
+          run: |
+            git clone -b ${{ inputs.tagname }} https://${{ inputs.repo }} dart-sdk
+        - name: Clone Patch
+          run: |
+            git clone -b ${{ inputs.patchtag }} https://${{ inputs.patch }} patch
+        - name: Apply Patch
+          run: |
+            cp -r -f ./patch/* ./dart_sdk/
+        - name: Build
+          run: |
+            cd dart-sdk
+            python ./tools/build.py --no-goma -m release -a x64 libdart
+            python ./tools/build.py --no-goma -m release -a arm64 libdart
+            cd ../
+        - name: Commit
+          run: |
+            git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            cd dart-sdk
+            rm -rf ".git"
+            cd out
+            git init
+            git add .
+            git commit -m "Actions: `date`"
+            git remote add origin https://${{ github.actor }}:${{ secrets.PUSH_TOKEN }}@${{ inputs.push }}
+            git push origin ${{ inputs.tagname }}
