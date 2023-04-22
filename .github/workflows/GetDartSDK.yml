@@ -32,9 +32,10 @@ jobs:
                 cd ../
             - name: Checkout Tag
               run: |
-                cd dart_sdk
-                gclient sync -r ${{ inputs.tagname }}
-                cd ../
+                cd dart_sdk/sdk
+                git checkout ${{ inputs.tagname }}
+                gclient sync
+                cd ../../
             - name: Clean
               run: |
                 rm -rf "depot_tools"
