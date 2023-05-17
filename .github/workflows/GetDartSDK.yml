@@ -34,7 +34,7 @@ jobs:
               run: |
                 export PATH="$PATH:$PWD/depot_tools"
                 cd dart_sdk/sdk
-                git checkout ${{ inputs.tagname }}
+                git checkout -b ${{ inputs.tagname }}
                 gclient sync
                 cd ../../
             - name: Clean
