@@ -45,9 +45,10 @@ jobs:
                 git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
                 git config --global user.name "github-actions[bot]"
                 cd dart_sdk/sdk
-                git add .
+                git remote set-url origin https://${{ github.actor }}:${{ secrets.PUSH_TOKEN }}@${{ inputs.push }}
                 git commit -m "Actions: `date`"
-                git remote add target https://${{ github.actor }}:${{ secrets.PUSH_TOKEN }}@${{ inputs.push }}
-                git push target ${{ inputs.tagname }}
+                git add .
+                git pull
+                git push origin ${{ inputs.tagname }}
 
               
